@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Hacen Algeria';
+  src: url('/fonts/Hacen-Algeria.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Boutros Dinkum';
+  src: url('/fonts/BoutrosMBCDinkum-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'VIP Hala Bold';
+  src: url('/fonts/VIP Hala Bold VIP Hala Bold.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+body {
+  font-family: 'Hacen Algeria', 'Boutros Dinkum', 'VIP Hala Bold', sans-serif !important;
+  background-color: #ffffff;
+  color: #1A1A1A;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'VIP Hala Bold', 'Hacen Algeria', sans-serif !important;
+}
+
+.bg-bluebits-gradient {
+  background: linear-gradient(135deg, #1D76BC 0%, #363B8E 100%);
+}
+
+.text-bluebits-gradient {
+  background: linear-gradient(135deg, #1D76BC 0%, #363B8E 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
