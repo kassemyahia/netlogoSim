@@ -27,18 +27,44 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Lint and test
+        run: npm run lint && npm test
+
+      - name: Setup Deno for Edge Function tests
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Test Edge Function validation
+        run: deno test supabase/functions/tests
 
       - name: Build project with Supabase Secrets
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_BOOK_G7_MATH_ID: ${{ secrets.VITE_BOOK_G7_MATH_ID }}
+          VITE_BOOK_G7_SCIENCE_ID: ${{ secrets.VITE_BOOK_G7_SCIENCE_ID }}
+          VITE_BOOK_G7_PHYSICS_ID: ${{ secrets.VITE_BOOK_G7_PHYSICS_ID }}
+          VITE_BOOK_G8_MATH_ID: ${{ secrets.VITE_BOOK_G8_MATH_ID }}
+          VITE_BOOK_G8_SCIENCE_ID: ${{ secrets.VITE_BOOK_G8_SCIENCE_ID }}
+          VITE_BOOK_G8_PHYSICS_ID: ${{ secrets.VITE_BOOK_G8_PHYSICS_ID }}
+          VITE_BOOK_G9_MATH_ID: ${{ secrets.VITE_BOOK_G9_MATH_ID }}
+          VITE_BOOK_G9_SCIENCE_ID: ${{ secrets.VITE_BOOK_G9_SCIENCE_ID }}
+          VITE_BOOK_G9_PHYSICS_ID: ${{ secrets.VITE_BOOK_G9_PHYSICS_ID }}
         run: npm run build
+
+      - name: Install browser for responsive checks
+        run: npx playwright install --with-deps chromium
+
+      - name: Run responsive browser checks
+        run: npm run test:browser
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5

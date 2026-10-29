@@ -2,46 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: 'Hacen Algeria';
-  src: url('/fonts/Hacen-Algeria.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
+@font-face { font-family: 'Hacen Algeria'; src: url('./assets/fonts/Hacen-Algeria.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Boutros Dinkum'; src: url('./assets/fonts/BoutrosMBCDinkum-Medium.ttf') format('truetype'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'VIP Hala Bold'; src: url('./assets/fonts/VIP Hala Bold VIP Hala Bold.otf') format('opentype'); font-weight: 700; font-display: swap; }
+
+:root {
+  color-scheme: dark;
+  --bg: #050914;
+  --panel: #0b1220;
+  --panel-2: #111b2e;
+  --line: #24324a;
+  --text: #edf4ff;
+  --muted: #9cabc2;
+  --brand: #2489e8;
+  --brand-hover: #48a6ff;
+  --danger: #fb7185;
+  --success: #34d399;
 }
 
-@font-face {
-  font-family: 'Boutros Dinkum';
-  src: url('/fonts/BoutrosMBCDinkum-Medium.ttf') format('truetype');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
+* { box-sizing: border-box; }
+html { min-width: 320px; background: var(--bg); }
+body { margin: 0; min-width: 320px; background: var(--bg); color: var(--text); font-family: 'Hacen Algeria', 'Boutros Dinkum', sans-serif; }
+h1, h2, h3, h4 { font-family: 'VIP Hala Bold', 'Hacen Algeria', sans-serif; }
+button, input, select, textarea { font: inherit; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
+::selection { background: var(--brand); color: white; }
 
-@font-face {
-  font-family: 'VIP Hala Bold';
-  src: url('/fonts/VIP Hala Bold VIP Hala Bold.otf') format('opentype');
-  font-weight: bold;
-  font-style: normal;
-  font-display: swap;
-}
-
-body {
-  font-family: 'Hacen Algeria', 'Boutros Dinkum', 'VIP Hala Bold', sans-serif !important;
-  background-color: #ffffff;
-  color: #1A1A1A;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'VIP Hala Bold', 'Hacen Algeria', sans-serif !important;
-}
-
-.bg-bluebits-gradient {
-  background: linear-gradient(135deg, #1D76BC 0%, #363B8E 100%);
-}
-
-.text-bluebits-gradient {
-  background: linear-gradient(135deg, #1D76BC 0%, #363B8E 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+@layer components {
+  .shell { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+  .panel { @apply rounded-2xl border p-4 sm:p-6; background: var(--panel); border-color: var(--line); }
+  .btn-primary { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50; background: var(--brand); }
+  .btn-primary:hover { background: var(--brand-hover); }
+  .btn-secondary { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition; color: var(--text); border-color: var(--line); background: var(--panel-2); }
+  .btn-secondary:hover { border-color: var(--brand); }
+  .field { @apply block min-h-11 w-full min-w-0 rounded-xl border px-3 py-2.5 text-sm transition placeholder:text-slate-500 disabled:opacity-60; color: var(--text); border-color: var(--line); background: #070d19; }
+  .field:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgb(36 137 232 / .18); }
+  .label { @apply mb-1.5 block text-sm font-bold text-slate-200; }
+  .alert-error { @apply rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200; }
+  .alert-success { @apply rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200; }
 }

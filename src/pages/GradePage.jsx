@@ -1,98 +1,53 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
 import { PlusCircle, RefreshCw } from 'lucide-react';
-import { supabase } from '../services/supabase';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import ProjectsTable from '../components/ui/ProjectsTable';
+import { listProjects } from '../services/api';
+import { friendlyMessage } from '../services/errors';
+
+const GRADES = { 7: 'الصف السابع', 8: 'الصف الثامن', 9: 'الصف التاسع' };
+const TABS = ['الكل', 'الرياضيات', 'العلوم', 'الفيزياء والكيمياء'];
 
 export default function GradePage() {
   const { gradeSlug } = useParams();
+  const gradeName = GRADES[gradeSlug] || GRADES[7];
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
+  const [error, setError] = useState('');
+  const [tab, setTab] = useState('الكل');
+  const requestRef = useRef(0);
 
-  const gradeName = gradeSlug === '7' ? 'الصف السابع' : gradeSlug === '8' ? 'الصف الثامن' : 'الصف التاسع';
-
-  const fetchGradeProjects = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('public_projects')
-      .select('*')
-      .eq('grade', gradeName)
-      .order('page', { ascending: true });
-
-    if (!error && data) {
-      setProjects(data);
+  const load = useCallback(async (signal) => {
+    const requestId = ++requestRef.current;
+    setLoading(true); setError('');
+    try {
+      const result = await listProjects(gradeName, signal);
+      if (requestId === requestRef.current) setProjects(result);
+    } catch (err) {
+      if (requestId === requestRef.current && err.name !== 'AbortError') setError(friendlyMessage(err, 'database_read'));
+    } finally {
+      if (requestId === requestRef.current) setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [gradeName]);
 
   useEffect(() => {
-    fetchGradeProjects();
-  }, [gradeSlug]);
-
-  const filteredProjects = activeTab === 'all' 
-    ? projects 
-    : projects.filter(p => p.subject === activeTab);
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => { controller.abort(); requestRef.current += 1; };
+  }, [load]);
+  const visible = tab === 'الكل' ? projects : projects.filter((project) => project.subject === tab);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-400 mb-1">
-            <Link to="/" className="hover:text-[#1D76BC]">الرئيسية</Link>
-            <span>/</span>
-            <span className="text-[#1D76BC]">{gradeName}</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">{gradeName} - مشاريع النمذجة والمحاكاة</h1>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Link
-            to="/register"
-            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-md shadow-emerald-600/20 flex items-center gap-2 transition"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>تسجيل مشروع جديد</span>
-          </Link>
-          <button
-            onClick={fetchGradeProjects}
-            className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition"
-            title="تحديث البيانات"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#1D76BC]' : ''}`} />
-          </button>
-        </div>
+    <main className="shell space-y-6 py-8">
+      <header className="panel flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+        <div><p className="text-sm text-blue-300">المشاريع المحجوزة</p><h1 className="text-2xl font-black sm:text-3xl">{gradeName}</h1></div>
+        <div className="flex flex-wrap gap-2"><Link className="btn-primary" to="/register"><PlusCircle className="h-4 w-4" />تسجيل مشروع</Link><button className="btn-secondary" onClick={() => load()} disabled={loading} aria-label="تحديث"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button></div>
+      </header>
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="تصفية حسب المادة">
+        {TABS.map((item) => <button key={item} role="tab" aria-selected={tab === item} onClick={() => setTab(item)} className={tab === item ? 'btn-primary' : 'btn-secondary'}>{item}</button>)}
       </div>
-
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-4">
-        {[
-          { id: 'all', label: 'جميع الكتب' },
-          { id: 'الرياضيات', label: 'كتاب الرياضيات' },
-          { id: 'العلوم', label: 'كتاب العلوم' },
-          { id: 'الفيزياء والكيمياء', label: 'كتاب الفيزياء والكيمياء' }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-              activeTab === tab.id
-                ? 'bg-[#1D76BC] text-white shadow-md shadow-[#1D76BC]/20'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-16 text-center">
-          <RefreshCw className="w-8 h-8 text-[#1D76BC] animate-spin mx-auto mb-3" />
-          <p className="text-slate-600 font-medium">جاري تحميل مشاريع {gradeName}...</p>
-        </div>
-      ) : (
-        <ProjectsTable projects={filteredProjects} onProjectUpdated={fetchGradeProjects} />
-      )}
-    </div>
+      {error && <div className="alert-error" role="alert">{error}</div>}
+      {loading ? <div className="panel py-16 text-center"><RefreshCw className="mx-auto h-8 w-8 animate-spin text-blue-400" /><p className="mt-3 text-slate-300">جاري تحميل المشاريع...</p></div> : <ProjectsTable projects={visible} onProjectUpdated={load} />}
+    </main>
   );
 }
