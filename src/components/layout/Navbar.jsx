@@ -1,70 +1,22 @@
-import React from "react";
-import { Link, NavLink } from "react-router-dom";
-import { BookOpen, PlusCircle, Home } from "lucide-react";
+import { BookOpen, Home, PlusCircle } from 'lucide-react';
+import { Link, NavLink } from 'react-router-dom';
+
+const itemClass = ({ isActive }) =>
+  `inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition ${
+    isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+  }`;
 
 export default function Navbar() {
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3 group">
-          <img
-            src={`${import.meta.env.BASE_URL}horizontal-logo.png`}
-            alt="BlueBits Team"
-            className="h-10 sm:h-12 w-auto object-contain transition-transform group-hover:scale-105"
-          />
-          <div className="hidden sm:block border-r border-slate-200 pr-3">
-            <span className="block text-xs font-bold text-slate-400">
-              مقرر النمذجة والمحاكاة
-            </span>
-            <span className="block text-sm font-extrabold text-[#1A1A1A]">
-              منصة مشاريع NetLogo
-            </span>
-          </div>
+    <header className="sticky top-0 z-40 border-b border-slate-800 bg-[#070c16]/95 backdrop-blur">
+      <div className="shell flex min-h-20 min-w-0 items-center justify-between gap-3 py-3">
+        <Link to="/" className="min-w-0 shrink">
+          <img src={`${import.meta.env.BASE_URL}horizontal-logo.png`} alt="فريق BlueBits" className="h-9 w-auto max-w-[135px] object-contain sm:h-11 sm:max-w-none" />
         </Link>
-
-        <nav className="flex items-center gap-2 sm:gap-4">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              `flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                isActive
-                  ? "bg-[#1D76BC] text-white shadow-md shadow-[#1D76BC]/20"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`
-            }
-          >
-            <Home className="w-4 h-4" />
-            <span className="hidden md:inline">الرئيسية</span>
-          </NavLink>
-
-          <NavLink
-            to="/books"
-            className={({ isActive }) =>
-              `flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                isActive
-                  ? "bg-[#1D76BC] text-white shadow-md shadow-[#1D76BC]/20"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`
-            }
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>مكتبة الكتب (9)</span>
-          </NavLink>
-
-          <NavLink
-            to="/register"
-            className={({ isActive }) =>
-              `flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                isActive
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                  : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
-              }`
-            }
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>تسجيل مشروع</span>
-          </NavLink>
+        <nav aria-label="التنقل الرئيسي" className="flex min-w-0 items-center gap-1 overflow-x-auto pb-1 sm:gap-2">
+          <NavLink to="/" end className={itemClass}><Home className="h-4 w-4" /><span className="hidden md:inline">الرئيسية</span></NavLink>
+          <NavLink to="/books" className={itemClass}><BookOpen className="h-4 w-4" /><span className="hidden sm:inline">الكتب</span></NavLink>
+          <NavLink to="/register" className={itemClass}><PlusCircle className="h-4 w-4" /><span>تسجيل</span></NavLink>
         </nav>
       </div>
     </header>

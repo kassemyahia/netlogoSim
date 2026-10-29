@@ -1,100 +1,58 @@
-import React, { useEffect, useState } from 'react';
+import { ArrowLeft, BookOpen, GraduationCap, PlusCircle, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, PlusCircle, Users, Sparkles, GraduationCap, ArrowLeft } from 'lucide-react';
-import { supabase } from '../services/supabase';
+import { countProjects } from '../services/api';
+import { friendlyMessage } from '../services/errors';
+
+const GRADES = ['السابع', 'الثامن', 'التاسع'];
 
 export default function HomePage() {
-  const [projectsCount, setProjectsCount] = useState(0);
-
+  const [count, setCount] = useState(null);
+  const [error, setError] = useState('');
   useEffect(() => {
-    async function fetchCount() {
-      const { count } = await supabase.from('public_projects').select('*', { count: 'exact', head: true });
-      if (count !== null) setProjectsCount(count);
-    }
-    fetchCount();
+    const controller = new AbortController();
+    countProjects(controller.signal).then((value) => {
+      setCount(value);
+      setError('');
+    }).catch((err) => {
+      if (err.name !== 'AbortError') setError(friendlyMessage(err, 'database_read'));
+    });
+    return () => controller.abort();
   }, []);
 
-  const grades = [
-    { title: "الصف السابع", slug: "7", subtitle: "الرياضيات، العلوم، الفيزياء والكيمياء", color: "from-blue-600 to-indigo-700" },
-    { title: "الصف الثامن", slug: "8", subtitle: "الرياضيات، العلوم، الفيزياء والكيمياء", color: "from-emerald-600 to-teal-700" },
-    { title: "الصف التاسع", slug: "9", subtitle: "الرياضيات، العلوم، الفيزياء والكيمياء", color: "from-purple-600 to-indigo-800" }
-  ];
-
   return (
-    <div className="space-y-12 pb-16">
-      <section className="relative overflow-hidden bg-gradient-to-l from-[#1D76BC] via-[#363B8E] to-[#1A1A1A] text-white py-16 px-4 sm:px-6 lg:px-8 shadow-xl">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
-          <div className="max-w-2xl text-center md:text-right">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-white text-xs font-semibold mb-4 backdrop-blur-md">
-              <Sparkles className="w-4 h-4 text-cyan-300" />
-              <span>مقرر النمذجة والمحاكاة • فريق بلوبيتس 2026</span>
-            </div>
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
-              منصة تنظيم مشاريع NetLogo للمناهج الدراسية
-            </h1>
-            <p className="mt-4 text-blue-100 text-sm sm:text-base leading-relaxed">
-              اختر تجربتك من كتب الصف السابع، الثامن، أو التاسع (رياضيات، علوم، فيزياء والكيمياء)، سجل فريقك، وابدأ محاكاتها بسهولة.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center md:justify-start gap-4">
-              <Link
-                to="/register"
-                className="px-6 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm shadow-lg shadow-emerald-900/30 flex items-center gap-2 transition"
-              >
-                <PlusCircle className="w-5 h-5" />
-                <span>تسجيل فكرة مشروع جديد</span>
-              </Link>
-              <Link
-                to="/books"
-                className="px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/30 text-white font-bold text-sm backdrop-blur-md flex items-center gap-2 transition"
-              >
-                <BookOpen className="w-5 h-5" />
-                <span>استعراض مكتبة الكتب (9)</span>
-              </Link>
+    <main className="pb-16">
+      <section className="border-b border-slate-800 bg-[radial-gradient(circle_at_top_right,_#173e70,_#070c16_55%)] py-16 sm:py-24">
+        <div className="shell grid items-center gap-10 lg:grid-cols-[1fr_300px]">
+          <div>
+            <p className="mb-3 text-sm font-bold text-blue-300">فريق BlueBits • النمذجة والمحاكاة</p>
+            <h1 className="max-w-4xl text-3xl font-black leading-tight sm:text-5xl">منصة مشاريع NetLogo للمناهج الدراسية</h1>
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">اختر تجربة، احجزها لفريقك، ثم ارفع تصدير NetLogo بصيغة HTML بصورة خاصة وآمنة.</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link className="btn-primary" to="/register"><PlusCircle className="h-5 w-5" />تسجيل مشروع</Link>
+              <Link className="btn-secondary" to="/books"><BookOpen className="h-5 w-5" />مكتبة الكتب</Link>
             </div>
           </div>
-
-          <div className="bg-white/10 border border-white/20 rounded-3xl p-6 backdrop-blur-md text-center shadow-2xl min-w-[240px]">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-3 text-white">
-              <Users className="w-6 h-6" />
-            </div>
-            <div className="text-3xl font-extrabold">{projectsCount}</div>
-            <div className="text-xs text-blue-200 mt-1">مشروع وتجربة مسجلة حتى الآن</div>
-          </div>
+          <aside className="panel text-center" aria-live="polite">
+            <p className="text-sm text-slate-400">المشاريع المسجلة</p>
+            {count === null && !error && <RefreshCw className="mx-auto mt-4 h-7 w-7 animate-spin text-blue-400" />}
+            {count !== null && <p className="mt-2 text-5xl font-black text-blue-300">{count}</p>}
+            {error && <p className="mt-3 text-sm text-rose-300">{error}</p>}
+          </aside>
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-xl mx-auto mb-10">
-          <h2 className="text-2xl font-extrabold text-[#1A1A1A]">اختر الصف الدراسي لاستعراض المشاريع</h2>
-          <p className="text-sm text-slate-500 mt-2">يمكنك تصفح التجارب المحجوزة لكل صف دراسي على حدة للتأكد من عدم تكرار الأفكار.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {grades.map(grade => (
-            <Link
-              key={grade.slug}
-              to={`/grade/${grade.slug}`}
-              className="bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 p-8 flex flex-col justify-between group overflow-hidden relative"
-            >
-              <div className={`absolute top-0 right-0 left-0 h-2 bg-gradient-to-l ${grade.color}`} />
-              <div>
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-l ${grade.color} text-white flex items-center justify-center mb-6 shadow-md group-hover:scale-110 transition-transform`}>
-                  <GraduationCap className="w-7 h-7" />
-                </div>
-                <h3 className="text-2xl font-extrabold text-slate-900 group-hover:text-[#1D76BC] transition-colors">
-                  {grade.title}
-                </h3>
-                <p className="text-xs text-slate-500 mt-2 leading-relaxed">{grade.subtitle}</p>
-              </div>
-
-              <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#1D76BC]">
-                <span>تصفح الكتب والمشاريع</span>
-                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-              </div>
+      <section className="shell py-12">
+        <h2 className="text-2xl font-black">استعراض المشاريع حسب الصف</h2>
+        <div className="mt-6 grid gap-5 md:grid-cols-3">
+          {GRADES.map((name, index) => (
+            <Link key={name} to={`/grade/${index + 7}`} className="panel group flex min-h-52 flex-col justify-between transition hover:border-blue-500">
+              <GraduationCap className="h-11 w-11 text-blue-400" />
+              <div><h3 className="text-2xl font-bold">الصف {name}</h3><span className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-blue-300">عرض الحجوزات <ArrowLeft className="h-4 w-4 transition group-hover:-translate-x-1" /></span></div>
             </Link>
           ))}
         </div>
       </section>
-    </div>
+    </main>
   );
 }

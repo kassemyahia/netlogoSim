@@ -1,0 +1,15 @@
+node_modules/
+.node_modules.pre-clean/
+dist/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+.idea/
+.vscode/
+.supabase/
+supabase/.temp/
+coverage/
+playwright-report/
+test-results/

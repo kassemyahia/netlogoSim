@@ -1,0 +1,13 @@
+project_id = "bluebits-netlogo-portal"
+
+[functions.project-api]
+verify_jwt = false
+
+[functions.google-owner]
+verify_jwt = false
+
+[functions.sheets-worker]
+verify_jwt = false
+
+[functions.legacy-migration]
+verify_jwt = false

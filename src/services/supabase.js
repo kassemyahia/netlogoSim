@@ -1,6 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://placeholder.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "placeholder-key";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
+const supabaseKey =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const configurationError =
+  !supabaseUrl || !supabaseKey
+    ? 'إعداد الاتصال بقاعدة البيانات غير مكتمل. يرجى إبلاغ مسؤول المنصة.'
+    : null;
+
+export const supabase = configurationError
+  ? null
+  : createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+export function requireSupabase() {
+  if (!supabase) throw new Error(configurationError);
+  return supabase;
+}
