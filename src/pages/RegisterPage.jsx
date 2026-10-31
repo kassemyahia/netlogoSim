@@ -91,7 +91,7 @@ export default function RegisterPage() {
     <main className="shell max-w-4xl py-8 sm:py-12">
       <section className="panel sm:p-8">
         <h1 className="text-2xl font-black sm:text-3xl">تسجيل فريق وحجز تجربة</h1>
-        <p className="mt-2 text-sm text-slate-400">أدخل 4–8 أعضاء. تبقى الأسماء والأرقام الجامعية خاصة.</p>
+        <p className="mt-2 text-sm text-slate-400">أدخل 4–8 أعضاء. ستظهر أسماء الأعضاء ضمن تفاصيل المشروع، بينما تبقى الأرقام الجامعية خاصة.</p>
         {error && <div className="alert-error mt-5 flex items-start gap-2" role="alert"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
         <form onSubmit={submit} className="mt-8 space-y-8">
           <fieldset className="space-y-3"><legend className="label">أعضاء الفريق</legend>

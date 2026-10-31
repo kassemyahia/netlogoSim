@@ -1,8 +1,10 @@
 begin;
-select plan(17);
+select plan(19);
 
 select ok(has_table_privilege('anon','public.public_projects','select'), 'anonymous can read public view');
 select ok(not has_table_privilege('anon','public.project_members','select'), 'anonymous cannot read members');
+select ok(has_column_privilege('anon','public.project_members','name','select'), 'anonymous can read public member names');
+select ok(not has_column_privilege('anon','public.project_members','university_id','select'), 'anonymous cannot read university IDs');
 select ok(not has_table_privilege('anon','public.project_submissions','select'), 'anonymous cannot read submissions');
 select ok(not has_table_privilege('anon','public.projects','insert'), 'anonymous cannot reserve directly');
 select ok(not has_table_privilege('authenticated','public.projects','update'), 'authenticated cannot bypass API');

@@ -37,7 +37,7 @@ export async function listProjects(grade, signal) {
   const client = requireSupabase();
   const query = client
     .from('public_projects')
-    .select('id,grade,subject,unit,page,idea_description,is_submitted,created_at')
+    .select('id,grade,subject,unit,page,idea_description,is_submitted,created_at,members')
     .eq('grade', grade)
     .order('page', { ascending: true });
   if (signal) query.abortSignal(signal);
@@ -64,7 +64,6 @@ export async function countProjects(signal) {
 
 export const registerProject = (payload) => invoke({ action: 'register', ...payload });
 export const upgradeLegacyCode = (projectId, legacyCode, requestId) => invoke({ action: 'upgrade-code', projectId, legacyCode, requestId });
-export const getProjectMembers = (projectId, teamCode) => invoke({ action: 'details', projectId, teamCode });
 
 export async function uploadProject({ projectId, teamCode, file }) {
   const form = new FormData();
@@ -73,32 +72,4 @@ export async function uploadProject({ projectId, teamCode, file }) {
   form.set('teamCode', teamCode);
   form.set('file', file);
   return invoke(form);
-}
-
-export async function downloadProject({ projectId, teamCode }) {
-  if (configurationError) throw new PortalError('configuration', configurationError);
-  const { data: session } = await requireSupabase().auth.getSession();
-  const response = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/project-api`,
-    {
-      method: 'POST',
-      headers: {
-        apikey:
-          import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-          import.meta.env.VITE_SUPABASE_ANON_KEY,
-        authorization: `Bearer ${session.session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ action: 'download', projectId, teamCode }),
-    },
-  );
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    if (response.status === 404 || body.code === 'NOT_FOUND') throw new PortalError('service_not_deployed');
-    throw new PortalError(body.code, body.error);
-  }
-  const blob = await response.blob();
-  const disposition = response.headers.get('content-disposition') || '';
-  const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
-  return { blob, filename: encoded ? decodeURIComponent(encoded) : 'project.html' };
 }

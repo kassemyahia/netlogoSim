@@ -12,7 +12,7 @@ If `public_projects` is a table rather than a view, or `projects.id` is not `big
 
 ## Data transition
 
-1. The migration copies valid legacy `team_members_json` rows into private `project_members` and replaces the public view with non-sensitive columns.
+1. The migration copies valid legacy `team_members_json` rows into `project_members`. A later migration intentionally exposes member names in the public project view while university IDs remain private.
 2. Plaintext legacy team codes are SHA-256 hashed into `legacy_team_code_hash`, the plaintext column is nulled, and the old browser RPCs lose execute grants. In each project's upload/download dialog, “update old short code” performs a rate-limited one-time exchange for a new 256-bit code; the legacy digest is then removed.
 3. Legacy public URLs are copied into private migration columns and marked `pending`. Deploy and invoke `legacy-migration` from a trusted terminal until `examined` is zero:
 

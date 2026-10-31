@@ -70,25 +70,13 @@ test('book library separates grade selection from all 11 books', async ({ page }
 
 test('sortable project table and both dialogs remain contained on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
-  await page.route('**/functions/v1/project-api', async (route) => {
-    const body = route.request().postDataJSON();
-    if (body.action === 'details' && body.teamCode === 'valid-team-code') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ ok: true, members: [{ position: 1, name: 'الطالب الأول' }, { position: 2, name: 'الطالب الثاني' }] }),
-      });
-      return;
-    }
-    await route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'unauthorized' }) });
-  });
   await page.route('**/rest/v1/public_projects*', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
     headers: { 'content-range': '0-1/2' },
     body: JSON.stringify([
-      { id: 1, grade: 'الصف السابع', subject: 'الرياضيات', unit: 'الوحدة الأولى', page: 12, idea_description: 'فكرة 1', is_submitted: false, created_at: new Date().toISOString() },
-      { id: 2, grade: 'الصف السابع', subject: 'العلوم', unit: 'الوحدة الثانية', page: 18, idea_description: 'فكرة 2', is_submitted: false, created_at: new Date().toISOString() },
+      { id: 1, grade: 'الصف السابع', subject: 'الرياضيات', unit: 'الوحدة الأولى', page: 12, idea_description: 'فكرة 1', members: [{ position: 1, name: 'الطالب الأول' }, { position: 2, name: 'الطالب الثاني' }], is_submitted: false, created_at: new Date().toISOString() },
+      { id: 2, grade: 'الصف السابع', subject: 'العلوم', unit: 'الوحدة الثانية', page: 18, idea_description: 'فكرة 2', members: [], is_submitted: false, created_at: new Date().toISOString() },
     ]),
   }));
   await page.goto('/#/grade/7');
@@ -108,10 +96,9 @@ test('sortable project table and both dialogs remain contained on mobile', async
   await expect(dialog.getByText('رقم الصفحة')).toBeVisible();
   await expect(dialog.getByText('رقم المشروع')).toHaveCount(0);
   await expect(dialog.getByText('الفريق العام')).toHaveCount(0);
-  await dialog.getByLabel('كود الفريق السري').fill('valid-team-code');
-  await dialog.getByRole('button', { name: 'عرض أعضاء الفريق' }).click();
   await expect(dialog.getByText('الطالب الأول')).toBeVisible();
   await expect(dialog.getByText('الطالب الثاني')).toBeVisible();
+  await expect(dialog.getByLabel('كود الفريق السري')).toHaveCount(0);
   let box = await dialog.boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(320);
@@ -122,6 +109,7 @@ test('sortable project table and both dialogs remain contained on mobile', async
   await page.getByRole('button', { name: 'رفع الملف' }).first().click();
   dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('heading', { name: 'رفع ملف HTML خاص' })).toBeVisible();
+  await expect(dialog.getByLabel('كود الفريق السري')).toBeVisible();
   box = await dialog.boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(320);

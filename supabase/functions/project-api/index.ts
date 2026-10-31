@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 import { deriveTeamSecret, sha256 } from '../_shared/crypto.ts';
-import { deleteFile, downloadFile, GoogleError, uploadHtml } from '../_shared/google.ts';
+import { deleteFile, GoogleError, uploadHtml } from '../_shared/google.ts';
 import { cors, friendlyError, getClientAddress, json } from '../_shared/http.ts';
 import { contentOkay, filenameOkay, GRADES, safeText, SUBJECTS, validMembers, validProjectId } from '../_shared/project-validation.ts';
 
@@ -89,30 +89,6 @@ async function upload(req: Request, form: FormData) {
   }
 }
 
-async function download(req: Request, body: Record<string, unknown>) {
-  const projectId = String(body.projectId || ''); const teamCode = String(body.teamCode || '');
-  if (!validProjectId(projectId)) return friendlyError(req, 'invalid_request');
-  if (!(await authorize(req, projectId, teamCode))) return friendlyError(req, 'unauthorized', 403);
-  const { data } = await admin.from('project_submissions').select('drive_file_id,original_filename').eq('project_id', projectId).eq('state', 'active').maybeSingle();
-  if (!data?.drive_file_id) return friendlyError(req, 'no_submission', 404);
-  try {
-    const google = await downloadFile(data.drive_file_id);
-    return new Response(google.body, { headers: { ...cors(req), 'content-type': 'application/octet-stream', 'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(data.original_filename)}`, 'x-content-type-options': 'nosniff', 'cache-control': 'private, no-store, max-age=0' } });
-  } catch (error) { return friendlyError(req, error instanceof GoogleError ? error.code : 'google_unavailable', 503); }
-}
-
-async function details(req: Request, body: Record<string, unknown>) {
-  const projectId = String(body.projectId || ''); const teamCode = String(body.teamCode || '');
-  if (!validProjectId(projectId)) return friendlyError(req, 'invalid_request');
-  if (!(await authorize(req, projectId, teamCode))) return friendlyError(req, 'unauthorized', 403);
-  const { data, error } = await admin.from('project_members').select('position,name').eq('project_id', projectId).order('position');
-  if (error) {
-    console.error(JSON.stringify({ event: 'project_members_read_failed', code: error.code }));
-    return friendlyError(req, 'invalid_request', 500);
-  }
-  return json(req, { ok: true, members: data || [] });
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(req) });
   if (req.method !== 'POST' || !Deno.env.get('TEAM_SECRET_PEPPER') || !Deno.env.get('TEAM_SECRET_DERIVATION_KEY')) return friendlyError(req, 'configuration', 503);
@@ -122,8 +98,6 @@ Deno.serve(async (req) => {
     const body = await req.json();
     if (body.action === 'register') return register(req, body);
     if (body.action === 'upgrade-code') return upgradeCode(req, body);
-    if (body.action === 'download') return download(req, body);
-    if (body.action === 'details') return details(req, body);
     return friendlyError(req, 'invalid_request');
   } catch { return friendlyError(req, 'invalid_request'); }
 });
