@@ -52,17 +52,19 @@ The integration requests `drive.file` and `spreadsheets`, not full Drive access.
 
 ## 3. Textbooks
 
-Upload the nine textbooks manually to a **separate** Drive location. For each file, set General access to “Anyone with the link — Viewer” (or use a domain-viewer policy if all students are in one Workspace domain). Copy only the Drive file ID from `/file/d/FILE_ID/view` into the matching frontend variable in `.env.example`:
+Upload the eleven textbooks manually to a **separate** Drive location. Grades 8 and 9 each have separate algebra and geometry books. For each file, set General access to “Anyone with the link — Viewer” (or use a domain-viewer policy if all students are in one Workspace domain). Copy only the Drive file ID from `/file/d/FILE_ID/view` into the matching frontend variable in `.env.example`:
 
 | Variable | Book |
 |---|---|
 | `VITE_BOOK_G7_MATH_ID` | Grade 7 mathematics |
 | `VITE_BOOK_G7_SCIENCE_ID` | Grade 7 science |
 | `VITE_BOOK_G7_PHYSICS_ID` | Grade 7 physics/chemistry |
-| `VITE_BOOK_G8_MATH_ID` | Grade 8 mathematics |
+| `VITE_BOOK_G8_ALGEBRA_ID` | Grade 8 algebra |
+| `VITE_BOOK_G8_GEOMETRY_ID` | Grade 8 geometry |
 | `VITE_BOOK_G8_SCIENCE_ID` | Grade 8 science |
 | `VITE_BOOK_G8_PHYSICS_ID` | Grade 8 physics/chemistry |
-| `VITE_BOOK_G9_MATH_ID` | Grade 9 mathematics |
+| `VITE_BOOK_G9_ALGEBRA_ID` | Grade 9 algebra |
+| `VITE_BOOK_G9_GEOMETRY_ID` | Grade 9 geometry |
 | `VITE_BOOK_G9_SCIENCE_ID` | Grade 9 science |
 | `VITE_BOOK_G9_PHYSICS_ID` | Grade 9 physics/chemistry |
 
@@ -97,5 +99,4 @@ Admin download is accepted only for a valid Supabase user whose server-controlle
 
 ## 6. GitHub Pages
 
-Create repository Actions secrets for `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (or the legacy anon key), and all nine public textbook IDs as needed; add the variables to the workflow build environment if configuring books through Actions. The workflow uses Node 22, `npm ci`, lint, tests, and a production build. HashRouter and `base: './'` are retained, so the build works under `/netlogoSim/`. Verify `dist/index.html` and emitted CSS use relative asset URLs before deploying.
-
+Create repository Actions secrets for `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (or the legacy anon key), and all eleven public textbook IDs as needed; add the variables to the workflow build environment if configuring books through Actions. The workflow uses Node 22, `npm ci`, lint, tests, and a production build. HashRouter and `base: './'` are retained, so the build works under `/netlogoSim/`. Verify `dist/index.html` and emitted CSS use relative asset URLs before deploying.

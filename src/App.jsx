@@ -3,6 +3,7 @@ import MainLayout from './components/layout/MainLayout';
 import HomePage from './pages/HomePage';
 import GradePage from './pages/GradePage';
 import BooksPage from './pages/BooksPage';
+import GradeBooksPage from './pages/GradeBooksPage';
 import RegisterPage from './pages/RegisterPage';
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
           <Route index element={<HomePage />} />
           <Route path="grade/:gradeSlug" element={<GradePage />} />
           <Route path="books" element={<BooksPage />} />
+          <Route path="books/:gradeSlug" element={<GradeBooksPage />} />
           <Route path="register" element={<RegisterPage />} />
         </Route>
       </Routes>

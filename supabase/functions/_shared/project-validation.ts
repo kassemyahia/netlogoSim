@@ -1,7 +1,12 @@
 export const GRADES = new Set(['الصف السابع', 'الصف الثامن', 'الصف التاسع']);
 export const SUBJECTS = new Set(['الرياضيات', 'العلوم', 'الفيزياء والكيمياء']);
+const MAX_POSTGRES_BIGINT = 9_223_372_036_854_775_807n;
 
 export function safeText(value: unknown, max: number) { return typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max; }
+export function validProjectId(value: string) {
+  if (!/^[1-9]\d{0,18}$/.test(value)) return false;
+  return BigInt(value) <= MAX_POSTGRES_BIGINT;
+}
 export function validMembers(value: unknown): value is Array<{ name: string; collegeId: string }> {
   if (!Array.isArray(value) || value.length < 4 || value.length > 8) return false;
   if (value.some((member) => !member || !safeText(member.name, 120) || !safeText(member.collegeId, 40))) return false;

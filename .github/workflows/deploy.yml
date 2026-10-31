@@ -41,8 +41,14 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Test Edge Function validation
-        run: deno test supabase/functions/tests
+      - name: Test and type-check Edge Functions
+        run: |
+          deno test supabase/functions/tests
+          deno check \
+            supabase/functions/project-api/index.ts \
+            supabase/functions/google-owner/index.ts \
+            supabase/functions/sheets-worker/index.ts \
+            supabase/functions/legacy-migration/index.ts
 
       - name: Build project with Supabase Secrets
         env:
@@ -53,9 +59,13 @@ jobs:
           VITE_BOOK_G7_SCIENCE_ID: ${{ secrets.VITE_BOOK_G7_SCIENCE_ID }}
           VITE_BOOK_G7_PHYSICS_ID: ${{ secrets.VITE_BOOK_G7_PHYSICS_ID }}
           VITE_BOOK_G8_MATH_ID: ${{ secrets.VITE_BOOK_G8_MATH_ID }}
+          VITE_BOOK_G8_ALGEBRA_ID: ${{ secrets.VITE_BOOK_G8_ALGEBRA_ID }}
+          VITE_BOOK_G8_GEOMETRY_ID: ${{ secrets.VITE_BOOK_G8_GEOMETRY_ID }}
           VITE_BOOK_G8_SCIENCE_ID: ${{ secrets.VITE_BOOK_G8_SCIENCE_ID }}
           VITE_BOOK_G8_PHYSICS_ID: ${{ secrets.VITE_BOOK_G8_PHYSICS_ID }}
           VITE_BOOK_G9_MATH_ID: ${{ secrets.VITE_BOOK_G9_MATH_ID }}
+          VITE_BOOK_G9_ALGEBRA_ID: ${{ secrets.VITE_BOOK_G9_ALGEBRA_ID }}
+          VITE_BOOK_G9_GEOMETRY_ID: ${{ secrets.VITE_BOOK_G9_GEOMETRY_ID }}
           VITE_BOOK_G9_SCIENCE_ID: ${{ secrets.VITE_BOOK_G9_SCIENCE_ID }}
           VITE_BOOK_G9_PHYSICS_ID: ${{ secrets.VITE_BOOK_G9_PHYSICS_ID }}
         run: npm run build

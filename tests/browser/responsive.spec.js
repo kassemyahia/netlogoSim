@@ -49,30 +49,81 @@ for (const width of widths) {
   });
 }
 
-test('dark book cards and unavailable actions fit mobile', async ({ page }) => {
+test('book library separates grade selection from all 11 books', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto('/#/books');
-  await expect(page.getByText('الكتاب غير متاح حالياً').first()).toBeVisible();
+  const grades = page.getByRole('region', { name: 'الصفوف الدراسية' });
+  await expect(grades.getByRole('link')).toHaveCount(3);
+  await grades.getByRole('link', { name: /الصف الثامن/ }).click();
+  await expect(page).toHaveURL(/#\/books\/8$/);
+  await expect(page.getByRole('heading', { name: 'كتب الصف الثامن' })).toBeVisible();
+  await expect(page.getByText('كتاب الجبر')).toBeVisible();
+  await expect(page.getByText('كتاب الهندسة')).toBeVisible();
+  await expect(page.locator('main article')).toHaveCount(4);
+  await page.goto('/#/books/7');
+  await expect(page.locator('main article')).toHaveCount(3);
+  await page.goto('/#/books/9');
+  await expect(page.locator('main article')).toHaveCount(4);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(5, 9, 20)');
 });
 
-test('mobile project cards and upload dialog remain contained', async ({ page }) => {
+test('sortable project table and both dialogs remain contained on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
+  await page.route('**/functions/v1/project-api', async (route) => {
+    const body = route.request().postDataJSON();
+    if (body.action === 'details' && body.teamCode === 'valid-team-code') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, members: [{ position: 1, name: 'الطالب الأول' }, { position: 2, name: 'الطالب الثاني' }] }),
+      });
+      return;
+    }
+    await route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'unauthorized' }) });
+  });
   await page.route('**/rest/v1/public_projects*', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    headers: { 'content-range': '0-0/1' },
-    body: JSON.stringify([{ id: '10000000-0000-0000-0000-000000000001', grade: 'الصف السابع', subject: 'الرياضيات', unit: 'الوحدة الأولى', page: 12, idea_description: 'وصف تجربة آمن وعام', team_label: 'فريق تجريبي', is_submitted: false, created_at: new Date().toISOString() }]),
+    headers: { 'content-range': '0-1/2' },
+    body: JSON.stringify([
+      { id: 1, grade: 'الصف السابع', subject: 'الرياضيات', unit: 'الوحدة الأولى', page: 12, idea_description: 'فكرة 1', is_submitted: false, created_at: new Date().toISOString() },
+      { id: 2, grade: 'الصف السابع', subject: 'العلوم', unit: 'الوحدة الثانية', page: 18, idea_description: 'فكرة 2', is_submitted: false, created_at: new Date().toISOString() },
+    ]),
   }));
   await page.goto('/#/grade/7');
-  await page.getByRole('button', { name: 'رفع الملف' }).click();
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible();
-  const box = await dialog.boundingBox();
+  const tableRegion = page.getByRole('region', { name: 'جدول المشاريع' });
+  await expect(tableRegion).toBeVisible();
+  await expect(page.getByRole('button', { name: 'ترتيب فكرة المشروع تصاعدياً' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'ترتيب رقم الصفحة تصاعدياً' })).toBeVisible();
+  await page.getByRole('button', { name: 'ترتيب فكرة المشروع تنازلياً' }).click();
+  await expect(page.locator('tbody tr').first().locator('td').first()).toContainText('فكرة 2');
+  await page.getByRole('button', { name: 'ترتيب رقم الصفحة تصاعدياً' }).click();
+  await expect(page.locator('tbody tr').first().locator('td').nth(4)).toHaveText('12');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+
+  await page.getByRole('button', { name: 'عرض التفاصيل' }).first().click();
+  let dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: 'تفاصيل المشروع' })).toBeVisible();
+  await expect(dialog.getByText('رقم الصفحة')).toBeVisible();
+  await expect(dialog.getByText('رقم المشروع')).toHaveCount(0);
+  await expect(dialog.getByText('الفريق العام')).toHaveCount(0);
+  await dialog.getByLabel('كود الفريق السري').fill('valid-team-code');
+  await dialog.getByRole('button', { name: 'عرض أعضاء الفريق' }).click();
+  await expect(dialog.getByText('الطالب الأول')).toBeVisible();
+  await expect(dialog.getByText('الطالب الثاني')).toBeVisible();
+  let box = await dialog.boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(320);
   expect(box.height).toBeLessThanOrEqual(640);
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
+
+  await page.getByRole('button', { name: 'رفع الملف' }).first().click();
+  dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: 'رفع ملف HTML خاص' })).toBeVisible();
+  box = await dialog.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(320);
+  expect(box.height).toBeLessThanOrEqual(640);
 });

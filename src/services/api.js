@@ -37,9 +37,7 @@ export async function listProjects(grade, signal) {
   const client = requireSupabase();
   const query = client
     .from('public_projects')
-    // Keep this projection compatible with the legacy production view while the
-    // secure migration is pending. Never request legacy member/file columns.
-    .select('id,grade,subject,unit,page,idea_description,is_submitted')
+    .select('id,grade,subject,unit,page,idea_description,is_submitted,created_at')
     .eq('grade', grade)
     .order('page', { ascending: true });
   if (signal) query.abortSignal(signal);
@@ -48,10 +46,7 @@ export async function listProjects(grade, signal) {
     throwIfAborted(error, signal);
     throw new PortalError('database_read');
   }
-  return (data || []).map((project) => ({
-    ...project,
-    team_label: `فريق ${String(project.id).slice(0, 6)}`,
-  }));
+  return data || [];
 }
 
 export async function countProjects(signal) {
@@ -69,6 +64,7 @@ export async function countProjects(signal) {
 
 export const registerProject = (payload) => invoke({ action: 'register', ...payload });
 export const upgradeLegacyCode = (projectId, legacyCode, requestId) => invoke({ action: 'upgrade-code', projectId, legacyCode, requestId });
+export const getProjectMembers = (projectId, teamCode) => invoke({ action: 'details', projectId, teamCode });
 
 export async function uploadProject({ projectId, teamCode, file }) {
   const form = new FormData();

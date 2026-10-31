@@ -1,11 +1,13 @@
-export const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || 'https://locallost.me,http://localhost:5173')
+const allowedOrigins = () => (Deno.env.get('ALLOWED_ORIGINS') || 'https://locallost.me,http://localhost:5173')
   .split(',').map((value) => value.trim()).filter(Boolean);
 
-export function cors(req: Request) {
+export function cors(req: Request, origins = allowedOrigins()) {
   const origin = req.headers.get('origin') || '';
   return {
-    'access-control-allow-origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
-    'access-control-allow-headers': 'authorization, apikey, content-type, x-owner-setup-secret, x-worker-secret',
+    'access-control-allow-origin': origins.includes(origin) ? origin : origins[0],
+    // supabase-js sends x-client-info on every function invocation. Keep the
+    // retry/tracing headers in sync with Supabase's documented browser list.
+    'access-control-allow-headers': 'authorization, apikey, x-client-info, content-type, x-retry-count, traceparent, tracestate, baggage, x-owner-setup-secret, x-worker-secret',
     'access-control-allow-methods': 'POST, OPTIONS',
     vary: 'Origin',
   };
