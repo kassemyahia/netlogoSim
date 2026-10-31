@@ -10,10 +10,12 @@ supabase db push --dry-run
 
 If `public_projects` is a table rather than a view, or `projects.id` is not `bigint`, stop and adapt the migration; the included `DROP VIEW` intentionally fails instead of deleting a table. Do not apply blindly. The migration does not delete projects or files and does not rewrite history.
 
+Migration `20261031164936_add_admin_recovery_and_upload_idempotency.sql` is additive. Before changing affected tables it snapshots `projects`, `operation_requests`, `project_submissions`, `google_integration_config`, and `sync_outbox` into the non-exposed `bluebits_backup` schema. It then links registration request IDs to projects, adds upload request idempotency, creates a private admin audit log, updates RPCs, confirms the existing Google resource IDs, and safely requeues stable project rows for Sheets backfill. Do not remove the private snapshot until an external database backup is confirmed.
+
 ## Data transition
 
 1. The migration copies valid legacy `team_members_json` rows into `project_members`. A later migration intentionally exposes member names in the public project view while university IDs remain private.
-2. Plaintext legacy team codes are SHA-256 hashed into `legacy_team_code_hash`, the plaintext column is nulled, and the old browser RPCs lose execute grants. In each project's upload/download dialog, “update old short code” performs a rate-limited one-time exchange for a new 256-bit code; the legacy digest is then removed.
+2. Plaintext legacy team codes are SHA-256 hashed into `legacy_team_code_hash`, the plaintext column is nulled, and the old browser RPCs lose execute grants. In each project's upload dialog, “update old short code” performs a rate-limited one-time exchange for a new 256-bit code; the legacy digest is then removed.
 3. Legacy public URLs are copied into private migration columns and marked `pending`. Deploy and invoke `legacy-migration` from a trusted terminal until `examined` is zero:
 
    ```bash

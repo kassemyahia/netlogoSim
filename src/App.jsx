@@ -5,6 +5,7 @@ import GradePage from './pages/GradePage';
 import BooksPage from './pages/BooksPage';
 import GradeBooksPage from './pages/GradeBooksPage';
 import RegisterPage from './pages/RegisterPage';
+import AdminPage from './pages/AdminPage';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="books" element={<BooksPage />} />
           <Route path="books/:gradeSlug" element={<GradeBooksPage />} />
           <Route path="register" element={<RegisterPage />} />
+          <Route path="admin" element={<AdminPage />} />
         </Route>
       </Routes>
     </HashRouter>

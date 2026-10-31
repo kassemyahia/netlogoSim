@@ -12,7 +12,7 @@ supabase db push
 supabase test db
 ```
 
-Deploy all functions:
+Deploy all functions after the migration succeeds:
 
 ```bash
 supabase functions deploy project-api
@@ -28,6 +28,8 @@ supabase secrets set --env-file supabase/.env.production
 ```
 
 `ALLOWED_ORIGINS` should contain the exact production origin `https://locallost.me` and the local Vite origin only when needed. CORS is not authentication; database grants, team-code verification, and server-side admin claims are the controls.
+
+Set `MAX_PREVIEW_BYTES` to the same value as `MAX_HTML_BYTES` unless previews need a lower ceiling. The current production value is 25 MiB (`26214400`).
 
 If Cloudflare Turnstile is used, put the secret in `TURNSTILE_SECRET_KEY` and render its widget in the registration form using a public `VITE_TURNSTILE_SITE_KEY`. If the server secret is set, the backend rejects missing/invalid tokens. Do not enable the secret until the widget is configured.
 
@@ -46,7 +48,9 @@ If Cloudflare Turnstile is used, put the secret in `TURNSTILE_SECRET_KEY` and re
      https://YOUR_PROJECT_REF.supabase.co/functions/v1/google-owner
    ```
 
-7. Open the returned `authorizationUrl`, sign in as the Drive owner, and consent. The callback encrypts the offline refresh token before storing it in an RLS-locked table. It creates a private `BlueBits Private Submissions` folder and private `BlueBits Projects (Private Mirror)` spreadsheet and stores their IDs server-side. Students never authorize Google.
+7. Open the returned `authorizationUrl`, sign in as the Drive owner, and consent. The callback encrypts the offline refresh token before storing it in an RLS-locked table. Students never authorize Google.
+
+Production is already authorized. Do **not** repeat OAuth or recreate resources for this deployment. Migration `20261031164936` points the existing authorization to the confirmed private folder `1YoII5_6-PCllZn0-89tltNvnll7Dp7Bl` and spreadsheet `191A_WBzmseYhiURRCv4GOOYbT55oBLJIDthp0NO_F0I` without changing sharing permissions.
 
 The integration requests `drive.file` and `spreadsheets`, not full Drive access. `drive.file` covers resources created by this app. An arbitrary existing folder ID does not grant access. This setup intentionally creates the private folder and spreadsheet through the authorized app, avoiding service-account ownership/quota assumptions. If authorization is revoked or expires, requests return an explicit reauthorization error; run the flow again. The private submissions folder and spreadsheet must never be shared publicly.
 
@@ -91,12 +95,46 @@ select status, count(*), max(last_error_code) as example_error
 from public.sync_outbox group by status order by status;
 ```
 
-The spreadsheet has `Projects` and `Members` tabs, immutable IDs, registration/update times, submission state, and private file metadata. It excludes codes, hashes, credentials, and Drive IDs. Editing Sheets never changes Supabase.
+The spreadsheet has `Projects` and `Members` tabs, immutable IDs, registration/update times, submission state, and private file metadata. `Projects!O:O` is `Team Members`, containing ordered names separated by ` • `. The individual records, including university IDs, remain in `Members`. It excludes codes, hashes, credentials, and Drive IDs. Editing Sheets never changes Supabase.
 
 ## 5. Admin authorization
 
-Admin download is accepted only for a valid Supabase user whose server-controlled `app_metadata.role` is `admin` (or `app_metadata.admin` is true). Set this with a trusted server/Admin API, never from frontend `user_metadata`. Keep access-token lifetimes appropriately short. A hidden route or client flag is not an admin grant.
+The `/admin` route is useful only after the backend verifies a Supabase user whose server-controlled `app_metadata.role` is `admin` (or `app_metadata.admin` is true). Create/sign in the owner account in Supabase Auth, then set app metadata from a trusted SQL Editor session (replace the email exactly):
+
+```sql
+update auth.users
+set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role":"admin"}'::jsonb
+where email = 'OWNER_EMAIL@example.com';
+```
+
+Sign out and sign in again so the JWT contains the new claim. Never use `user_metadata` for authorization. The owner page can search projects/students, recover a still-derivable code, rotate an irrecoverable code, and export recoverable codes only within ten minutes of a real sign-in. Recovery/rotation/export responses are `no-store`; codes are held only in page memory and are never synchronized to Sheets. Every sensitive operation is rate-limited and added to the private `admin_audit_log` without the code value.
+
+Codes issued by secure registration are recoverable only while the corresponding private request ID exists and the current stored hash still matches the deterministic derivation. A legacy hash or a code that was already rotated cannot be reversed; use the owner-only rotation button. Rotation invalidates the prior code immediately.
 
 ## 6. GitHub Pages
 
-Create repository Actions secrets for `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (or the legacy anon key), and all eleven public textbook IDs as needed; add the variables to the workflow build environment if configuring books through Actions. The workflow uses Node 22, `npm ci`, lint, tests, and a production build. HashRouter and `base: './'` are retained, so the build works under `/netlogoSim/`. Verify `dist/index.html` and emitted CSS use relative asset URLs before deploying.
+Keep `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (or the legacy anon key) as Actions secrets. The eleven non-secret public textbook IDs are repository **variables**, already wired as `vars.*` in the workflow; `src/config/books.js` also contains the verified public defaults. The workflow uses Node 22, `npm ci`, lint, Deno tests/type checks, browser tests, and a production build. HashRouter and `base: './'` are retained, so the build works under `/netlogoSim/`.
+
+## 7. Safe release order
+
+```bash
+# Review only
+npx supabase db push --linked --dry-run
+
+# Apply the additive migration. It first creates private snapshots in
+# bluebits_backup, then adds recovery/audit/idempotency state and queues Sheets backfill.
+npx supabase db push --linked --yes
+
+# Add the preview limit and deploy changed functions.
+npx supabase secrets set --project-ref vmtkzngknuayhxhjnqgq MAX_PREVIEW_BYTES=26214400
+npx supabase functions deploy project-api --project-ref vmtkzngknuayhxhjnqgq
+npx supabase functions deploy sheets-worker --project-ref vmtkzngknuayhxhjnqgq
+npx supabase functions deploy google-owner --project-ref vmtkzngknuayhxhjnqgq
+
+# Verify database and function health.
+npx supabase db advisors --linked
+npx supabase migration list --linked
+npx supabase functions list --project-ref vmtkzngknuayhxhjnqgq
+```
+
+After Supabase verification, commit and push to `main`; GitHub Pages deploys through `.github/workflows/deploy.yml`. Confirm the Actions run passes before testing a real student upload. Do not delete `bluebits_backup` until an external database backup has been confirmed.

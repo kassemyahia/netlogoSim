@@ -1,8 +1,10 @@
-import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, Eye, Lock, RefreshCw, Search, Upload, X } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, Eye, Lock, Play, RefreshCw, Search, Upload, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { upgradeLegacyCode, uploadProject } from '../../services/api';
 import { friendlyMessage } from '../../services/errors';
 import { validateHtmlFile } from '../../utils/validation';
+import ProjectPreviewModal from './ProjectPreviewModal';
+import UploadProgress from './UploadProgress';
 
 const COLLATOR = new Intl.Collator('ar', { numeric: true, sensitivity: 'base' });
 const SORT_COLUMNS = [
@@ -53,7 +55,11 @@ export default function ProjectsTable({ projects, onProjectUpdated }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [upgradedCode, setUpgradedCode] = useState('');
+  const [uploadState, setUploadState] = useState({ stage: 'idle', progress: null });
+  const [previewProject, setPreviewProject] = useState(null);
   const closeRef = useRef(null);
+  const uploadController = useRef(null);
+  const uploadRequestId = useRef(crypto.randomUUID());
 
   const visible = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -77,6 +83,8 @@ export default function ProjectsTable({ projects, onProjectUpdated }) {
     setTeamCode('');
     setFile(null);
     setUpgradedCode('');
+    setUploadState({ stage: 'idle', progress: null });
+    uploadRequestId.current = crypto.randomUUID();
     setMessage({ type: '', text: '' });
   }
 
@@ -97,12 +105,27 @@ export default function ProjectsTable({ projects, onProjectUpdated }) {
     const fileError = validateHtmlFile(file) || (!file ? 'اختر ملف HTML.' : '');
     if (fileError) return setMessage({ type: 'error', text: fileError });
     setBusy(true); setMessage({ type: '', text: '' });
+    uploadController.current = new AbortController();
     try {
-      await uploadProject({ projectId: dialog.project.id, teamCode: teamCode.trim(), file });
+      await uploadProject({
+        projectId: dialog.project.id,
+        teamCode: teamCode.trim(),
+        file,
+        requestId: uploadRequestId.current,
+        signal: uploadController.current.signal,
+        onStage: (stage) => setUploadState((current) => ({ ...current, stage })),
+        onProgress: ({ percent }) => setUploadState({ stage: 'transferring', progress: percent }),
+      });
+      setUploadState({ stage: 'finalizing', progress: 100 });
       setMessage({ type: 'success', text: 'تم رفع النسخة الجديدة بنجاح.' });
-      await onProjectUpdated?.();
-    } catch (err) { setMessage({ type: 'error', text: friendlyMessage(err) }); }
-    finally { setBusy(false); }
+      setBusy(false);
+      setUploadState({ stage: 'success', progress: 100 });
+      Promise.resolve(onProjectUpdated?.()).catch(() => setMessage({ type: 'success', text: 'تم الرفع، لكن تعذر تحديث القائمة تلقائياً. حدّث الصفحة لعرض الحالة الجديدة.' }));
+    } catch (err) {
+      setUploadState({ stage: err.name === 'AbortError' ? 'cancelled' : 'error', progress: null });
+      setMessage({ type: 'error', text: err.name === 'AbortError' ? 'تم إلغاء نقل الملف. تحقق من حالة المشروع قبل إعادة المحاولة.' : friendlyMessage(err) });
+      setBusy(false);
+    } finally { uploadController.current = null; }
   }
 
   const title = dialog?.action === 'details' ? 'تفاصيل المشروع' : 'رفع ملف HTML خاص';
@@ -167,12 +190,14 @@ export default function ProjectsTable({ projects, onProjectUpdated }) {
                 </ol>
               ) : <p className="mt-2 text-sm text-slate-400">لم تُسجل أسماء أعضاء لهذا المشروع.</p>}
             </section>
+            {dialog.project.is_submitted ? <button type="button" className="btn-primary w-full" onClick={() => { setPreviewProject(dialog.project); setDialog(null); }}><Play className="h-4 w-4" />معاينة المشروع</button> : <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">لم يتم رفع المشروع بعد</div>}
           </div>
         ) : (
           <>
             <p className="mt-3 text-sm leading-6 text-slate-400">تتحقق الخدمة من كود الفريق قبل قبول ملف المشروع ورفعه إلى Google Drive.</p>
             {message.text && <div className={`mt-4 flex gap-2 ${message.type === 'success' ? 'alert-success' : 'alert-error'}`}>{message.type === 'success' ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />}{message.text}</div>}
             {upgradedCode && <code className="mt-3 block break-all rounded-xl border border-blue-500/40 bg-blue-500/10 p-3 text-center text-blue-200" dir="ltr">{upgradedCode}</code>}
+            <UploadProgress stage={uploadState.stage} progress={uploadState.progress} onCancel={busy ? () => uploadController.current?.abort() : null} />
             <form onSubmit={submit} className="mt-5 space-y-4">
               <label><span className="label">كود الفريق السري</span><input className="field font-mono" type="password" autoComplete="off" required value={teamCode} onChange={(event) => setTeamCode(event.target.value)} /></label>
               <label><span className="label">ملف .html فقط</span><input className="field file:ml-2 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-2 file:text-white" type="file" accept=".html,text/html" required onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>
@@ -183,5 +208,6 @@ export default function ProjectsTable({ projects, onProjectUpdated }) {
         )}
       </section>
     </div>}
+    {previewProject && <ProjectPreviewModal project={previewProject} onClose={() => setPreviewProject(null)} />}
   </div>;
 }

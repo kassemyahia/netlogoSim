@@ -1,5 +1,7 @@
 begin;
-select plan(19);
+create extension if not exists pgtap with schema extensions;
+set local search_path = public, extensions;
+select plan(26);
 
 select ok(has_table_privilege('anon','public.public_projects','select'), 'anonymous can read public view');
 select ok(not has_table_privilege('anon','public.project_members','select'), 'anonymous cannot read members');
@@ -8,7 +10,10 @@ select ok(not has_column_privilege('anon','public.project_members','university_i
 select ok(not has_table_privilege('anon','public.project_submissions','select'), 'anonymous cannot read submissions');
 select ok(not has_table_privilege('anon','public.projects','insert'), 'anonymous cannot reserve directly');
 select ok(not has_table_privilege('authenticated','public.projects','update'), 'authenticated cannot bypass API');
+select ok(not has_table_privilege('anon','public.admin_audit_log','select'), 'anonymous cannot read owner audit events');
 select ok(not has_function_privilege('anon','public.register_project_secure(uuid,text,text,text,integer,text,text,text,jsonb)','execute'), 'anonymous cannot call secure registration RPC');
+select ok(not has_function_privilege('anon','public.admin_rotate_team_code(bigint,text,uuid,text)','execute'), 'anonymous cannot rotate a team code');
+select ok(not has_function_privilege('anon','public.begin_submission(bigint,text,bigint,text,uuid)','execute'), 'anonymous cannot begin an upload directly');
 select ok(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('register_project','upload_team_project_file') and has_function_privilege('anon',p.oid,'execute')), 'legacy RPCs are absent or not executable');
 
 set local role service_role;
@@ -20,6 +25,12 @@ select ok(not public.authorize_team(1000000001,'wrong-hash'), 'wrong team hash i
 insert into public.projects(id,grade,subject,unit,page,idea_description,team_label,team_secret_hash)
 values (1000000002,'الصف السابع','العلوم','واحد',902,'اختبار','فريق ثان','second-hash');
 select ok(not public.authorize_team(1000000002,'correct-hash'), 'one team secret cannot access another team');
+select is(
+  (public.begin_submission(1000000002,'retry.html',100,repeat('c',64),'30000000-0000-0000-0000-000000000001'))->>'submissionId',
+  (public.begin_submission(1000000002,'retry.html',100,repeat('c',64),'30000000-0000-0000-0000-000000000001'))->>'submissionId',
+  'repeated upload request IDs reuse the same pending submission'
+);
+select is((select count(*)::integer from public.project_submissions where project_id=1000000002),1,'idempotent upload requests do not create duplicate versions');
 select throws_ok($$insert into public.projects(grade,subject,unit,page,idea_description,team_label,team_secret_hash) values ('الصف السابع','الرياضيات','اثنان',901,'تعارض','فريق آخر','hash')$$,'23505',null,'reservation uniqueness survives concurrent races');
 select throws_ok($$insert into public.project_members(project_id,position,name,university_id) values (1000000001,1,'أ','001'),(1000000001,2,'ب','001')$$,'23505',null,'duplicate university IDs in a team are rejected');
 select ok(exists(select 1 from pg_indexes where indexname='one_active_submission_per_project'), 'only one active file version is allowed');
@@ -31,6 +42,8 @@ select is((select state from public.project_submissions where id='20000000-0000-
 select public.activate_submission('20000000-0000-0000-0000-000000000002','new-drive');
 select is((select state from public.project_submissions where id='20000000-0000-0000-0000-000000000001'),'superseded','old version supersedes only after commit');
 select is((select state from public.project_submissions where id='20000000-0000-0000-0000-000000000002'),'active','replacement activates atomically');
+select ok(public.admin_rotate_team_code(1000000002,'rotated-hash','40000000-0000-0000-0000-000000000001',repeat('d',64)),'service role can rotate a code atomically');
+select is((select count(*)::integer from public.admin_audit_log where project_id=1000000002 and action='code_rotated'),1,'code rotation writes a private audit event');
 
 select * from finish();
 rollback;

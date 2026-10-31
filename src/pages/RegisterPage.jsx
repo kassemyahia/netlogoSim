@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { registerProject, uploadProject } from '../services/api';
 import { friendlyMessage } from '../services/errors';
 import { validateHtmlFile, validateMembers } from '../utils/validation';
+import UploadProgress from '../components/ui/UploadProgress';
 
 const GRADES = ['الصف السابع', 'الصف الثامن', 'الصف التاسع'];
 const SUBJECTS = ['الرياضيات', 'العلوم', 'الفيزياء والكيمياء'];
@@ -19,6 +20,9 @@ export default function RegisterPage() {
   const [copied, setCopied] = useState(false);
   const submitLock = useRef(false);
   const requestId = useRef(crypto.randomUUID());
+  const uploadRequestId = useRef(crypto.randomUUID());
+  const uploadController = useRef(null);
+  const [uploadProgress, setUploadProgress] = useState({ stage: 'idle', progress: null });
 
   const updateMember = (index, key, value) => { setError(''); setMembers((current) => current.map((member, i) => i === index ? { ...member, [key]: value } : member)); };
   const updateField = (event) => { setError(''); setFields((current) => ({ ...current, [event.target.name]: event.target.value })); };
@@ -45,22 +49,49 @@ export default function RegisterPage() {
       setResult(next);
       if (file) {
         try {
-          await uploadProject({ projectId: registered.projectId, teamCode: registered.teamCode, file });
+          uploadController.current = new AbortController();
+          await uploadProject({
+            projectId: registered.projectId,
+            teamCode: registered.teamCode,
+            file,
+            requestId: uploadRequestId.current,
+            signal: uploadController.current.signal,
+            onStage: (stage) => setUploadProgress((current) => ({ ...current, stage })),
+            onProgress: ({ percent }) => setUploadProgress({ stage: 'transferring', progress: percent }),
+          });
+          setUploadProgress({ stage: 'finalizing', progress: 100 });
           setResult({ ...next, upload: 'done' });
         } catch (uploadError) {
-          setResult({ ...next, upload: 'failed', uploadError: friendlyMessage(uploadError) });
+          if (!['network', 'upload_timeout'].includes(uploadError.code) && uploadError.name !== 'AbortError') uploadRequestId.current = crypto.randomUUID();
+          setUploadProgress({ stage: uploadError.name === 'AbortError' ? 'cancelled' : 'error', progress: null });
+          setResult({ ...next, upload: 'failed', uploadError: uploadError.name === 'AbortError' ? 'تم إلغاء نقل الملف. بقي الحجز محفوظاً؛ تحقق من حالة المشروع قبل المحاولة.' : friendlyMessage(uploadError) });
         }
       }
     } catch (err) { setError(friendlyMessage(err)); }
-    finally { submitLock.current = false; setSubmitting(false); }
+    finally { uploadController.current = null; submitLock.current = false; setSubmitting(false); }
   }
 
   async function retryUpload() {
     if (!result || !file || submitting) return;
     setSubmitting(true); setResult((current) => ({ ...current, upload: 'uploading', uploadError: '' }));
-    try { await uploadProject({ projectId: result.projectId, teamCode: result.teamCode, file }); setResult((current) => ({ ...current, upload: 'done' })); }
-    catch (err) { setResult((current) => ({ ...current, upload: 'failed', uploadError: friendlyMessage(err) })); }
-    finally { setSubmitting(false); }
+    uploadController.current = new AbortController();
+    try {
+      await uploadProject({
+        projectId: result.projectId,
+        teamCode: result.teamCode,
+        file,
+        requestId: uploadRequestId.current,
+        signal: uploadController.current.signal,
+        onStage: (stage) => setUploadProgress((current) => ({ ...current, stage })),
+        onProgress: ({ percent }) => setUploadProgress({ stage: 'transferring', progress: percent }),
+      });
+      setUploadProgress({ stage: 'finalizing', progress: 100 });
+      setResult((current) => ({ ...current, upload: 'done' }));
+    } catch (err) {
+      if (!['network', 'upload_timeout'].includes(err.code) && err.name !== 'AbortError') uploadRequestId.current = crypto.randomUUID();
+      setUploadProgress({ stage: err.name === 'AbortError' ? 'cancelled' : 'error', progress: null });
+      setResult((current) => ({ ...current, upload: 'failed', uploadError: err.name === 'AbortError' ? 'تم إلغاء نقل الملف. بقي الحجز محفوظاً؛ تحقق من حالة المشروع قبل المحاولة.' : friendlyMessage(err) }));
+    } finally { uploadController.current = null; setSubmitting(false); }
   }
 
   async function copyCode() {
@@ -73,12 +104,12 @@ export default function RegisterPage() {
       <section className="panel text-center sm:p-10">
         <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-400" />
         <h1 className="mt-4 text-2xl font-black">تم حجز المشروع بنجاح</h1>
-        <p className="mt-2 text-sm leading-7 text-slate-300">احفظ الكود الآن. لن يظهر في القوائم العامة ولا يمكن استعادته من المنصة.</p>
+        <p className="mt-2 text-sm leading-7 text-slate-300">احفظ الكود الآن. لن يظهر في القوائم العامة، ويمكن للمسؤول فقط مساعدتك في استعادته أو استبداله.</p>
         <div className="mx-auto mt-6 max-w-md rounded-xl border border-blue-500/40 bg-blue-500/10 p-4">
           <p className="text-xs text-slate-300">كود الفريق السري</p>
           <div className="mt-2 flex min-w-0 items-center justify-center gap-2"><code className="min-w-0 break-all text-xl font-black tracking-wider text-blue-200" dir="ltr">{result.teamCode}</code><button onClick={copyCode} className="btn-secondary shrink-0" aria-label="نسخ كود الفريق">{copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}</button></div>
         </div>
-        {result.upload === 'uploading' && <p className="mt-5 text-blue-200">جاري رفع الملف الخاص...</p>}
+        {result.upload === 'uploading' && <div className="mt-5"><UploadProgress stage={uploadProgress.stage} progress={uploadProgress.progress} onCancel={() => uploadController.current?.abort()} /></div>}
         {result.upload === 'done' && <div className="alert-success mt-5">تم رفع ملف HTML الخاص بنجاح.</div>}
         {result.upload === 'failed' && <div className="mt-5 space-y-3"><div className="alert-error">تم حفظ الحجز والكود، لكن تعذر رفع الملف: {result.uploadError}</div><button className="btn-primary" onClick={retryUpload} disabled={submitting}><Upload className="h-4 w-4" />إعادة محاولة الرفع</button></div>}
         {error && <div className="alert-error mt-4">{error}</div>}

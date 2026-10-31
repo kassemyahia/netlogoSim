@@ -1,13 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 import { deleteFile, GoogleError, sheetsBatchUpdate } from '../_shared/google.ts';
 import { cors, friendlyError, json } from '../_shared/http.ts';
+import { memberSheetValues, projectSheetValues, SheetMember } from '../_shared/sheet-values.ts';
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
-const literal = (value: unknown) => {
-  const text = value == null ? '' : String(value);
-  return /^[=+\-@]/.test(text) ? `'${text}` : text;
-};
-
 async function row(tab: 'Projects' | 'Members', key: string) {
   await admin.from('sheet_row_map').upsert({ tab_name: tab, entity_key: key }, { onConflict: 'tab_name,entity_key', ignoreDuplicates: true });
   const { data, error } = await admin.from('sheet_row_map').select('row_number').eq('tab_name', tab).eq('entity_key', key).single();
@@ -23,10 +19,14 @@ async function syncProject(projectId: string) {
   if (error) throw error;
   const { data: submission } = await admin.from('project_submissions').select('original_filename,size_bytes,sha256,version').eq('project_id', projectId).eq('state', 'active').maybeSingle();
   const projectRow = await row('Projects', projectId);
-  const data: unknown[] = [{ range: `Projects!A${projectRow}:N${projectRow}`, values: [[project.id, project.grade, project.subject, literal(project.unit), String(project.page), literal(project.idea_description), literal(project.team_label), project.created_at, project.updated_at, String(project.is_submitted), literal(submission?.original_filename), submission?.size_bytes ? String(submission.size_bytes) : '', submission?.sha256 || '', submission?.version ? String(submission.version) : '']] }];
-  for (const member of members || []) {
+  const orderedMembers = (members || []) as SheetMember[];
+  const data: unknown[] = [
+    { range: 'Projects!O1', values: [['Team Members']] },
+    { range: `Projects!A${projectRow}:O${projectRow}`, values: [projectSheetValues(project, submission, orderedMembers)] },
+  ];
+  for (const member of orderedMembers) {
     const memberRow = await row('Members', member.id);
-    data.push({ range: `Members!A${memberRow}:E${memberRow}`, values: [[member.id, member.project_id, String(member.position), literal(member.name), literal(member.university_id)]] });
+    data.push({ range: `Members!A${memberRow}:E${memberRow}`, values: [memberSheetValues(member)] });
   }
   await sheetsBatchUpdate(data);
 }

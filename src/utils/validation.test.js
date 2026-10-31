@@ -21,6 +21,9 @@ describe('file validation', () => {
     expect(validateHtmlFile({ name: 'model.html', size: 100 })).toBeNull();
     expect(validateHtmlFile({ name: 'model.nlogo', size: 100 })).toBeTruthy();
     expect(validateHtmlFile({ name: 'model.htm', size: 100 })).toBeTruthy();
+    expect(validateHtmlFile({ name: 'model.html', size: 1024 * 1024 })).toBeNull();
+    expect(validateHtmlFile({ name: 'Ants.html', size: 7_400_000 })).toBeNull();
+    expect(validateHtmlFile({ name: 'near-limit.html', size: MAX_FILE_BYTES })).toBeNull();
     expect(validateHtmlFile({ name: 'model.html', size: MAX_FILE_BYTES + 1 })).toBeTruthy();
   });
 });

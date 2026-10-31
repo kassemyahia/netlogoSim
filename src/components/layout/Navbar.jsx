@@ -1,4 +1,4 @@
-import { BookOpen, Home, PlusCircle } from 'lucide-react';
+import { BookOpen, Home, PlusCircle, ShieldCheck } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
 
 const itemClass = ({ isActive }) =>
@@ -17,6 +17,7 @@ export default function Navbar() {
           <NavLink to="/" end className={itemClass}><Home className="h-4 w-4" /><span className="hidden md:inline">الرئيسية</span></NavLink>
           <NavLink to="/books" className={itemClass}><BookOpen className="h-4 w-4" /><span className="hidden sm:inline">الكتب</span></NavLink>
           <NavLink to="/register" className={itemClass}><PlusCircle className="h-4 w-4" /><span>تسجيل</span></NavLink>
+          <NavLink to="/admin" className={itemClass}><ShieldCheck className="h-4 w-4" /><span className="hidden lg:inline">الإدارة</span></NavLink>
         </nav>
       </div>
     </header>

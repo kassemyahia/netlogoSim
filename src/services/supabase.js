@@ -13,7 +13,7 @@ export const configurationError =
 export const supabase = configurationError
   ? null
   : createClient(supabaseUrl, supabaseKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
     });
 
 export function requireSupabase() {

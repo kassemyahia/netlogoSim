@@ -55,19 +55,17 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_BOOK_G7_MATH_ID: ${{ secrets.VITE_BOOK_G7_MATH_ID }}
-          VITE_BOOK_G7_SCIENCE_ID: ${{ secrets.VITE_BOOK_G7_SCIENCE_ID }}
-          VITE_BOOK_G7_PHYSICS_ID: ${{ secrets.VITE_BOOK_G7_PHYSICS_ID }}
-          VITE_BOOK_G8_MATH_ID: ${{ secrets.VITE_BOOK_G8_MATH_ID }}
-          VITE_BOOK_G8_ALGEBRA_ID: ${{ secrets.VITE_BOOK_G8_ALGEBRA_ID }}
-          VITE_BOOK_G8_GEOMETRY_ID: ${{ secrets.VITE_BOOK_G8_GEOMETRY_ID }}
-          VITE_BOOK_G8_SCIENCE_ID: ${{ secrets.VITE_BOOK_G8_SCIENCE_ID }}
-          VITE_BOOK_G8_PHYSICS_ID: ${{ secrets.VITE_BOOK_G8_PHYSICS_ID }}
-          VITE_BOOK_G9_MATH_ID: ${{ secrets.VITE_BOOK_G9_MATH_ID }}
-          VITE_BOOK_G9_ALGEBRA_ID: ${{ secrets.VITE_BOOK_G9_ALGEBRA_ID }}
-          VITE_BOOK_G9_GEOMETRY_ID: ${{ secrets.VITE_BOOK_G9_GEOMETRY_ID }}
-          VITE_BOOK_G9_SCIENCE_ID: ${{ secrets.VITE_BOOK_G9_SCIENCE_ID }}
-          VITE_BOOK_G9_PHYSICS_ID: ${{ secrets.VITE_BOOK_G9_PHYSICS_ID }}
+          VITE_BOOK_G7_MATH_ID: ${{ vars.VITE_BOOK_G7_MATH_ID }}
+          VITE_BOOK_G7_SCIENCE_ID: ${{ vars.VITE_BOOK_G7_SCIENCE_ID }}
+          VITE_BOOK_G7_PHYSICS_ID: ${{ vars.VITE_BOOK_G7_PHYSICS_ID }}
+          VITE_BOOK_G8_ALGEBRA_ID: ${{ vars.VITE_BOOK_G8_ALGEBRA_ID }}
+          VITE_BOOK_G8_GEOMETRY_ID: ${{ vars.VITE_BOOK_G8_GEOMETRY_ID }}
+          VITE_BOOK_G8_SCIENCE_ID: ${{ vars.VITE_BOOK_G8_SCIENCE_ID }}
+          VITE_BOOK_G8_PHYSICS_ID: ${{ vars.VITE_BOOK_G8_PHYSICS_ID }}
+          VITE_BOOK_G9_ALGEBRA_ID: ${{ vars.VITE_BOOK_G9_ALGEBRA_ID }}
+          VITE_BOOK_G9_GEOMETRY_ID: ${{ vars.VITE_BOOK_G9_GEOMETRY_ID }}
+          VITE_BOOK_G9_SCIENCE_ID: ${{ vars.VITE_BOOK_G9_SCIENCE_ID }}
+          VITE_BOOK_G9_PHYSICS_ID: ${{ vars.VITE_BOOK_G9_PHYSICS_ID }}
         run: npm run build
 
       - name: Install browser for responsive checks

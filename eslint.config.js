@@ -10,7 +10,7 @@ export default [
       ecmaVersion: 2022,
       sourceType: 'module',
       parserOptions: { ecmaFeatures: { jsx: true } },
-      globals: { AbortController: 'readonly', crypto: 'readonly', document: 'readonly', FormData: 'readonly', fetch: 'readonly', getComputedStyle: 'readonly', navigator: 'readonly', URL: 'readonly', window: 'readonly' },
+      globals: { AbortController: 'readonly', AbortSignal: 'readonly', Blob: 'readonly', Buffer: 'readonly', crypto: 'readonly', document: 'readonly', FormData: 'readonly', fetch: 'readonly', getComputedStyle: 'readonly', navigator: 'readonly', URL: 'readonly', window: 'readonly', XMLHttpRequest: 'readonly' },
     },
     plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
     rules: {

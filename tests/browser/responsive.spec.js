@@ -68,14 +68,31 @@ test('book library separates grade selection from all 11 books', async ({ page }
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(5, 9, 20)');
 });
 
+test('owner administration requires authentication', async ({ page }) => {
+  await page.goto('/#/admin');
+  await expect(page.getByRole('heading', { name: 'إدارة المالك' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'دخول آمن' })).toBeVisible();
+});
+
 test('sortable project table and both dialogs remain contained on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
+  await page.route('**/functions/v1/project-api', async (route) => {
+    const contentType = route.request().headers()['content-type'] || '';
+    if (contentType.includes('application/json')) {
+      const body = route.request().postDataJSON();
+      if (body.action === 'preview') {
+        await route.fulfill({ status: 200, contentType: 'application/octet-stream', body: '<!doctype html><script>document.body.textContent="preview"</script>' });
+        return;
+      }
+    }
+    await route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'unauthorized' }) });
+  });
   await page.route('**/rest/v1/public_projects*', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
     headers: { 'content-range': '0-1/2' },
     body: JSON.stringify([
-      { id: 1, grade: 'الصف السابع', subject: 'الرياضيات', unit: 'الوحدة الأولى', page: 12, idea_description: 'فكرة 1', members: [{ position: 1, name: 'الطالب الأول' }, { position: 2, name: 'الطالب الثاني' }], is_submitted: false, created_at: new Date().toISOString() },
+      { id: 1, grade: 'الصف السابع', subject: 'الرياضيات', unit: 'الوحدة الأولى', page: 12, idea_description: 'فكرة 1', members: [{ position: 1, name: 'الطالب الأول' }, { position: 2, name: 'الطالب الثاني' }], is_submitted: true, created_at: new Date().toISOString() },
       { id: 2, grade: 'الصف السابع', subject: 'العلوم', unit: 'الوحدة الثانية', page: 18, idea_description: 'فكرة 2', members: [], is_submitted: false, created_at: new Date().toISOString() },
     ]),
   }));
@@ -99,6 +116,15 @@ test('sortable project table and both dialogs remain contained on mobile', async
   await expect(dialog.getByText('الطالب الأول')).toBeVisible();
   await expect(dialog.getByText('الطالب الثاني')).toBeVisible();
   await expect(dialog.getByLabel('كود الفريق السري')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'معاينة المشروع' }).click();
+  const preview = page.getByRole('dialog', { name: 'معاينة المشروع' });
+  const iframe = preview.locator('iframe');
+  await expect(iframe).toHaveAttribute('sandbox', 'allow-scripts');
+  await expect(iframe).not.toHaveAttribute('sandbox', /allow-same-origin/);
+  await expect(iframe).toHaveAttribute('src', /^blob:/);
+  await preview.getByRole('button', { name: 'إغلاق المعاينة' }).click();
+  await page.getByRole('button', { name: 'عرض التفاصيل' }).first().click();
+  dialog = page.getByRole('dialog');
   let box = await dialog.boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(320);
@@ -110,6 +136,12 @@ test('sortable project table and both dialogs remain contained on mobile', async
   dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('heading', { name: 'رفع ملف HTML خاص' })).toBeVisible();
   await expect(dialog.getByLabel('كود الفريق السري')).toBeVisible();
+  await dialog.getByLabel('كود الفريق السري').fill('wrong-code');
+  await dialog.getByLabel('ملف .html فقط').setInputFiles({ name: 'model.html', mimeType: 'text/html', buffer: Buffer.from('<!doctype html><html></html>') });
+  const uploadButton = dialog.getByRole('button', { name: 'رفع الملف', exact: true });
+  await uploadButton.click();
+  await expect(dialog.getByText('كود الفريق غير صحيح أو لا يملك صلاحية الوصول.')).toBeVisible();
+  await expect(uploadButton).toBeEnabled();
   box = await dialog.boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(320);

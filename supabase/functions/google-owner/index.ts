@@ -28,11 +28,16 @@ async function callback(req: Request) {
   const { error: credentialError } = await admin.from('google_oauth_credentials').upsert({ singleton: true, encrypted_refresh_token: encrypted.encrypted, iv: encrypted.iv, updated_at: new Date().toISOString() });
   if (credentialError) return new Response('Could not store owner authorization.', { status: 500 });
 
+  const { data: existingConfig } = await admin.from('google_integration_config').select('submissions_folder_id,spreadsheet_id').eq('singleton', true).maybeSingle();
+  if (existingConfig?.submissions_folder_id && existingConfig?.spreadsheet_id) {
+    return new Response('<!doctype html><html><body><h1>BlueBits Google authorization refreshed</h1><p>The existing private folder and spreadsheet were preserved. You may close this window.</p></body></html>', { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
+  }
+
   try {
     const folder = await google(tokens.access_token, 'https://www.googleapis.com/drive/v3/files?fields=id', { method: 'POST', body: JSON.stringify({ name: 'BlueBits Private Submissions', mimeType: 'application/vnd.google-apps.folder' }) });
     const spreadsheet = await google(tokens.access_token, 'https://sheets.googleapis.com/v4/spreadsheets', { method: 'POST', body: JSON.stringify({ properties: { title: 'BlueBits Projects (Private Mirror)' }, sheets: [{ properties: { title: 'Projects' } }, { properties: { title: 'Members' } }] }) });
     await google(tokens.access_token, `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheet.spreadsheetId}/values:batchUpdate`, { method: 'POST', body: JSON.stringify({ valueInputOption: 'RAW', data: [
-      { range: 'Projects!A1:N1', values: [['Project ID','Grade','Subject','Unit','Page','Description','Team label','Registered at','Updated at','Submitted','Filename','Size bytes','SHA-256','Version']] },
+      { range: 'Projects!A1:O1', values: [['Project ID','Grade','Subject','Unit','Page','Description','Team label','Registered at','Updated at','Submitted','Filename','Size bytes','SHA-256','Version','Team Members']] },
       { range: 'Members!A1:E1', values: [['Member ID','Project ID','Position','Name','University ID']] },
     ] }) });
     const { error } = await admin.from('google_integration_config').upsert({ singleton: true, submissions_folder_id: folder.id, spreadsheet_id: spreadsheet.spreadsheetId, updated_at: new Date().toISOString() });
